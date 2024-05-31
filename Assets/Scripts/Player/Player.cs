@@ -15,9 +15,16 @@ public class Player : MonoBehaviour
     Animator playerAnimator;
 
     [SerializeField] float moveSpeed = 600f;
+
+    [Header("Roll Status")]
+    [SerializeField] bool isRolling = false;
     [SerializeField] float rollAnimTime = 0.4f;
     [SerializeField] float rollSpeedBoost = 400f;
+    [SerializeField] float delayBetweenRolls = .3f;
     [SerializeField] Vector2 rollDistance = new Vector2(20, 0);
+
+    [Header("Player Gun")]
+    [SerializeField] GameObject playerGun;
 
     private void Awake()
     {
@@ -33,10 +40,15 @@ public class Player : MonoBehaviour
     // Fixed Update r for playerMovement
     void FixedUpdate()
     {
-
+        RotateGun();
         CharacterMovement();
         FlipSprite();
 
+    }
+
+    private void Update()
+    {
+        
     }
 
     #region playerMovement
@@ -77,15 +89,26 @@ public class Player : MonoBehaviour
         IsMovingHorizontal = Mathf.Abs(playerRigidbody.velocity.x) > Mathf.Epsilon;
         IsMovingVertical = Mathf.Abs(playerRigidbody.velocity.y) > Mathf.Epsilon;
 
-        if ((value.isPressed && IsMovingHorizontal) || (value.isPressed && IsMovingVertical))
+        if ((value.isPressed && IsMovingHorizontal && !isRolling) || (value.isPressed && IsMovingVertical && !isRolling))
         {
             playerAnimator.SetTrigger("isRolling");
 
             moveSpeed += rollSpeedBoost;
+
+            isRolling = true;   
+            StartCoroutine(ResetRollStatus(delayBetweenRolls));
+
             StartCoroutine(ResetMoveSpeed(rollAnimTime));
 
             playerRigidbody.AddForce(rollDistance * Mathf.Sign(transform.localScale.x), ForceMode2D.Impulse);
         }
+    }
+
+    IEnumerator ResetRollStatus(float value)
+    {
+        yield return new WaitForSeconds(value);
+
+        isRolling = false;
     }
 
     IEnumerator ResetMoveSpeed(float value)
@@ -93,6 +116,7 @@ public class Player : MonoBehaviour
         yield return new WaitForSeconds(value);
 
         moveSpeed -= rollSpeedBoost;
+
     }
 
     void FlipSprite()
@@ -124,6 +148,26 @@ public class Player : MonoBehaviour
         //    }
         //}
 
+    }
+
+    #endregion
+
+    #region playerAttack
+
+    void RotateGun()
+    {
+        // lấy ra toạ độ hiện tại của con chuột trên màn hình và chuyển nó thành vị trí Vector2 (transform)
+        Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+
+        // Get ra hướng vector từ con chuột tới vũ khí của người chơi 
+        Vector2 lookDirection = mousePosition - transform.position;
+
+        // Tính góc alpha của playerGun thông qua 
+        float angle = Mathf.Atan2(lookDirection.y, lookDirection.x) * Mathf.Rad2Deg;
+
+        Quaternion rotation = Quaternion.Euler(0, 0, angle);
+
+        playerGun.transform.rotation = rotation;
     }
 
     #endregion
