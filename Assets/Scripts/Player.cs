@@ -7,6 +7,7 @@ using UnityEngine.InputSystem;
 public class Player : MonoBehaviour
 {
     Rigidbody2D playerRigidbody;
+    SpriteRenderer playerSpriteRender;
 
     Vector2 moveInput;
     bool IsMovingHorizontal;
@@ -17,17 +18,26 @@ public class Player : MonoBehaviour
     [SerializeField] float moveSpeed = 600f;
 
     [Header("Roll Status")]
-    [SerializeField] bool isRolling = false;
     [SerializeField] float rollAnimTime = 0.4f;
     [SerializeField] float rollSpeedBoost = 400f;
-    [SerializeField] float delayBetweenRolls = .3f;
+    float rollCountdown;
+    [SerializeField] float delayBetweenRolls = 1;
     [SerializeField] Vector2 rollDistance = new Vector2(20, 0);
 
-    [Header("Player Gun")]
+    [Header("Player Weapon")]
     [SerializeField] GameObject playerGun;
+    [SerializeField] GameObject playerBullet;
+    [SerializeField] Transform gunTip;
+    float fireCountdown;
+    [SerializeField] float fireDelay;
+    [SerializeField] float bulletForce;
+    [SerializeField] float destroyBulletDelay = 5f;
+    [SerializeField] GameObject gunFX;
+    [SerializeField] float destroyMuzzleDelay;
 
     private void Awake()
     {
+        playerSpriteRender = GetComponent<SpriteRenderer>();
         playerRigidbody = GetComponent<Rigidbody2D>();
         playerAnimator = GetComponent<Animator>();
     }
@@ -40,15 +50,18 @@ public class Player : MonoBehaviour
     // Fixed Update r for playerMovement
     void FixedUpdate()
     {
-        RotateGun();
         CharacterMovement();
         FlipSprite();
+        RotateGun();
 
     }
 
     private void Update()
     {
         
+
+        
+
     }
 
     #region playerMovement
@@ -86,29 +99,24 @@ public class Player : MonoBehaviour
 
     void OnRoll(InputValue value)
     {
+        // xử lý cooldown của Roll
+        rollCountdown -= Time.deltaTime;
+
         IsMovingHorizontal = Mathf.Abs(playerRigidbody.velocity.x) > Mathf.Epsilon;
         IsMovingVertical = Mathf.Abs(playerRigidbody.velocity.y) > Mathf.Epsilon;
 
-        if ((value.isPressed && IsMovingHorizontal && !isRolling) || (value.isPressed && IsMovingVertical && !isRolling))
+        if ((value.isPressed && IsMovingHorizontal && rollCountdown <= 0) || (value.isPressed && IsMovingVertical && rollCountdown <= 0))
         {
             playerAnimator.SetTrigger("isRolling");
 
             moveSpeed += rollSpeedBoost;
 
-            isRolling = true;   
-            StartCoroutine(ResetRollStatus(delayBetweenRolls));
+            rollCountdown = delayBetweenRolls;
 
             StartCoroutine(ResetMoveSpeed(rollAnimTime));
 
             playerRigidbody.AddForce(rollDistance * Mathf.Sign(transform.localScale.x), ForceMode2D.Impulse);
         }
-    }
-
-    IEnumerator ResetRollStatus(float value)
-    {
-        yield return new WaitForSeconds(value);
-
-        isRolling = false;
     }
 
     IEnumerator ResetMoveSpeed(float value)
@@ -127,26 +135,27 @@ public class Player : MonoBehaviour
         //    Debug.Log("velocity is:" + playerRigidbody.velocity);
         //}
 
-        IsMovingHorizontal = Mathf.Abs(playerRigidbody.velocity.x) > Mathf.Epsilon;
+        //IsMovingHorizontal = Mathf.Abs(playerRigidbody.velocity.x) > Mathf.Epsilon;
 
-        if (IsMovingHorizontal)
-        {
-            transform.localScale = new Vector2(Mathf.Sign(playerRigidbody.velocity.x), 1f);
-        }
-
-
-        //if (moveInput.x != 0)
+        //if (IsMovingHorizontal)
         //{
-        //    if (moveInput.x > Mathf.Epsilon)
-        //    {
-        //        transform.localScale = new Vector2(1, 1);
-
-        //    }
-        //    else if (moveInput.x < -Mathf.Epsilon)
-        //    {
-        //        transform.localScale = new Vector2(-1, 1);
-        //    }
+        //    transform.localScale = new Vector2(Mathf.Sign(playerRigidbody.velocity.x), 1f);
         //}
+
+
+        if (moveInput.x != 0)
+        {
+            if (moveInput.x > Mathf.Epsilon)
+            {
+                playerSpriteRender.flipX = false;
+
+            }
+            else if (moveInput.x < -Mathf.Epsilon)
+            {
+                playerSpriteRender.flipX = true;
+
+            }
+        }
 
     }
 
@@ -168,6 +177,53 @@ public class Player : MonoBehaviour
         Quaternion rotation = Quaternion.Euler(0, 0, angle);
 
         playerGun.transform.rotation = rotation;
+
+        if (playerGun.transform.eulerAngles.z > 90 && playerGun.transform.eulerAngles.z < 270)
+        {
+            playerGun.transform.localScale 
+                = new Vector2(7,-7); 
+        }
+        else 
+        {
+            playerGun.transform.localScale 
+                = new Vector2(7, 7); 
+            
+
+        }
+    }
+
+    void OnFire(InputValue value)
+    {
+        // xử lý cooldown của Fire
+        fireCountdown -= Time.deltaTime;
+
+        if (value.isPressed && fireCountdown <= 0)
+        {
+            GameObject spawnedBullet = Instantiate(playerBullet, gunTip.position, Quaternion.identity);
+
+            GameObject spawnedMuzzle = Instantiate(gunFX, gunTip.position, gunTip.transform.rotation);
+
+            Rigidbody2D bulletRigidbody = spawnedBullet.GetComponent<Rigidbody2D>();
+
+            bulletRigidbody.AddForce(playerGun.transform.right * bulletForce, ForceMode2D.Impulse);
+
+            StartCoroutine(DestroySpawnedBullet(spawnedBullet, destroyBulletDelay, spawnedMuzzle, destroyMuzzleDelay));
+
+
+        }
+
+
+    }
+
+    IEnumerator DestroySpawnedBullet(GameObject objectToDestroy, float destroyBulletDelay, 
+                                     GameObject spawnedMuzzle, float destroyMuzzleDelay)
+    {
+        yield return new WaitForSeconds(destroyMuzzleDelay);
+        Destroy(spawnedMuzzle);
+        
+
+        yield return new WaitForSeconds(destroyBulletDelay - destroyMuzzleDelay);
+        Destroy(objectToDestroy);
     }
 
     #endregion
