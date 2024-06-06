@@ -18,7 +18,7 @@ public class Player : MonoBehaviour
     [SerializeField] float moveSpeed = 600f;
 
     [Header("Roll Status")]
-    [SerializeField] float rollAnimTime = 0.4f;
+    [SerializeField] float rollSpeedBoostTime = 0.4f;
     [SerializeField] float rollSpeedBoost = 400f;
     float rollCountdown;
     [SerializeField] float delayBetweenRolls = 1;
@@ -27,13 +27,17 @@ public class Player : MonoBehaviour
     [Header("Player Weapon")]
     [SerializeField] GameObject playerGun;
     [SerializeField] GameObject playerBullet;
-    [SerializeField] Transform gunTip;
-    float fireCountdown;
-    [SerializeField] float fireDelay;
+    [SerializeField] Transform gunTipPos;
+    [SerializeField] GameObject gunMuzzle;
+
+    public bool isFiring;
+    Coroutine firingCoroutine;
+    [SerializeField] float delayBetweenFire = 0.3f;
     [SerializeField] float bulletForce;
     [SerializeField] float destroyBulletDelay = 5f;
     [SerializeField] GameObject gunFX;
     [SerializeField] float destroyMuzzleDelay;
+
 
     private void Awake()
     {
@@ -51,16 +55,25 @@ public class Player : MonoBehaviour
     void FixedUpdate()
     {
         CharacterMovement();
-        FlipSprite();
-        RotateGun();
+        
 
     }
 
     private void Update()
     {
-        
+        if (playerRigidbody.IsTouchingLayers(LayerMask.GetMask("Obstacles")))
+        {
+            Debug.Log("Is Touching Obstacles");
+        }
 
-        
+        // xử lý cooldown của Roll
+        rollCountdown -= Time.deltaTime;
+
+
+        FlipSprite();
+
+        RotateGun();
+        Fire();
 
     }
 
@@ -99,9 +112,6 @@ public class Player : MonoBehaviour
 
     void OnRoll(InputValue value)
     {
-        // xử lý cooldown của Roll
-        rollCountdown -= Time.deltaTime;
-
         IsMovingHorizontal = Mathf.Abs(playerRigidbody.velocity.x) > Mathf.Epsilon;
         IsMovingVertical = Mathf.Abs(playerRigidbody.velocity.y) > Mathf.Epsilon;
 
@@ -113,7 +123,7 @@ public class Player : MonoBehaviour
 
             rollCountdown = delayBetweenRolls;
 
-            StartCoroutine(ResetMoveSpeed(rollAnimTime));
+            StartCoroutine(ResetMoveSpeed(rollSpeedBoostTime));
 
             playerRigidbody.AddForce(rollDistance * Mathf.Sign(transform.localScale.x), ForceMode2D.Impulse);
         }
@@ -180,47 +190,63 @@ public class Player : MonoBehaviour
 
         if (playerGun.transform.eulerAngles.z > 90 && playerGun.transform.eulerAngles.z < 270)
         {
-            playerGun.transform.localScale 
-                = new Vector2(7,-7); 
+            playerGun.transform.localScale
+                = new Vector2(1, -1);
         }
-        else 
+        else
         {
-            playerGun.transform.localScale 
-                = new Vector2(7, 7); 
-            
+            playerGun.transform.localScale
+                = new Vector2(1, 1);
+
 
         }
     }
 
-    void OnFire(InputValue value)
+    void Fire()
     {
-        // xử lý cooldown của Fire
-        fireCountdown -= Time.deltaTime;
+        // nếu đang giữ chuột thì isFiring = true
+        isFiring = Input.GetMouseButton(0) ? true : false;
 
-        if (value.isPressed && fireCountdown <= 0)
+
+        if (isFiring == true && firingCoroutine == null)
         {
-            GameObject spawnedBullet = Instantiate(playerBullet, gunTip.position, Quaternion.identity);
+            firingCoroutine = StartCoroutine(FireContinuously());
 
-            GameObject spawnedMuzzle = Instantiate(gunFX, gunTip.position, gunTip.transform.rotation);
+        }
+        else if (!isFiring && firingCoroutine != null)
+        {
+            StopCoroutine(firingCoroutine);
+
+            firingCoroutine = null;
+        }
+    }
+
+    IEnumerator FireContinuously()
+    {
+        // làm hàm fire loop liên tục miễn là ng chơi còn giữ chuột
+        while (true)
+        {
+            GameObject spawnedBullet = Instantiate(playerBullet, gunTipPos.position, Quaternion.identity);
+
+            gunMuzzle.SetActive(true);
 
             Rigidbody2D bulletRigidbody = spawnedBullet.GetComponent<Rigidbody2D>();
 
             bulletRigidbody.AddForce(playerGun.transform.right * bulletForce, ForceMode2D.Impulse);
 
-            StartCoroutine(DestroySpawnedBullet(spawnedBullet, destroyBulletDelay, spawnedMuzzle, destroyMuzzleDelay));
+            StartCoroutine(DestroySpawnedBullet(spawnedBullet, destroyBulletDelay, destroyMuzzleDelay));
 
-
+            yield return new WaitForSeconds(delayBetweenFire);
         }
-
 
     }
 
-    IEnumerator DestroySpawnedBullet(GameObject objectToDestroy, float destroyBulletDelay, 
-                                     GameObject spawnedMuzzle, float destroyMuzzleDelay)
+    IEnumerator DestroySpawnedBullet(GameObject objectToDestroy, float destroyBulletDelay,
+                                      float destroyMuzzleDelay)
     {
         yield return new WaitForSeconds(destroyMuzzleDelay);
-        Destroy(spawnedMuzzle);
-        
+        gunMuzzle.SetActive(false);
+
 
         yield return new WaitForSeconds(destroyBulletDelay - destroyMuzzleDelay);
         Destroy(objectToDestroy);

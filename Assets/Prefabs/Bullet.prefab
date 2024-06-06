@@ -10,11 +10,13 @@ GameObject:
   m_Component:
   - component: {fileID: 6763833974279441314}
   - component: {fileID: 61797326407704769}
+  - component: {fileID: 8106991214362179513}
   - component: {fileID: 8813388632679485108}
   - component: {fileID: 4771000980993748786}
+  - component: {fileID: 6540869009599374211}
   m_Layer: 3
   m_Name: Bullet
-  m_TagString: Untagged
+  m_TagString: PlayerBullet
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -29,7 +31,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 3.5, y: 1.27, z: 0}
-  m_LocalScale: {x: 3, y: 3, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -89,6 +91,20 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &8106991214362179513
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5661099832127749803}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3846f0ee74253e5458bd899c31b5aee0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rockHitPE: {fileID: 2189265254340297023, guid: f36a13eeaa4979e4f90bd4d1da43385d, type: 3}
+  humanHitPE: {fileID: 2189265254340297023, guid: a9ec2e28f8a79b449a1a89c3bc19dcaf, type: 3}
 --- !u!50 &8813388632679485108
 Rigidbody2D:
   serializedVersion: 4
@@ -152,3 +168,16 @@ CircleCollider2D:
   m_CompositeOrder: 0
   m_Offset: {x: 0.00047246617, y: 0.00000011920929}
   m_Radius: 0.110725164
+--- !u!114 &6540869009599374211
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5661099832127749803}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e4817528a9ccc14284d1715cfac4948, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  damage: 10
